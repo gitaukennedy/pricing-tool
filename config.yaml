@@ -1,24 +1,22 @@
-version: "1.0.0"
-lines_of_business: ["motor", "buildings", "contents"]
+lines_of_business:
+  - motor
+  - buildings
+  - contents
 
 actuarial_assumptions:
-  target_loss_ratio: 0.65
-  expense_loading: 0.18        # 18% operational & acquisition expense
-  profit_margin: 0.07          # 7% underwriting profit loading
+  expense_loading: 0.20
+  profit_margin: 0.05
 
 excess_relativities:
   motor:
-    0: 1.15
+    100: 1.10
     250: 1.00
     500: 0.90
-    1000: 0.80
   buildings:
-    0: 1.10
-    250: 1.00
-    500: 0.92
-    1000: 0.85
-  contents:
-    0: 1.08
+    100: 1.05
     250: 1.00
     500: 0.95
-    1000: 0.90
+  contents:
+    100: 1.05
+    250: 1.00
+    500: 0.95

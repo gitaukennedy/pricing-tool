@@ -1,61 +1,44 @@
 """
 pricing_tool/app.py
-FastAPI backend for single quotes, batch pricing, and actuary exports.
+FastAPI backend exposing the actuarial pricing engine for real-time quote generation.
 """
 
-from fastapi import FastAPI, HTTPException, UploadFile, File
-from fastapi.responses import FileResponse
-from pydantic import BaseModel
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel, Field
 import pandas as pd
-import io
 from engine import PricingEngine
 
-app = FastAPI(title="IAA AI-Assisted Actuarial Pricing Engine", version="1.0.0")
-engine = PricingEngine()
+app = FastAPI(
+    title="IAA AI-Assisted Actuarial Pricing Engine",
+    description="Actuarial pricing API incorporating Tweedie generalized linear models / gradient boosting, excess relativities, and expense loadings.",
+    version="2.0.0"
+)
 
-class PolicyQuoteRequest(BaseModel):
-    line_of_business: str
-    voluntary_excess: int = 250
-    exposure: float = 1.0
-    features: dict
+pricing_engine = PricingEngine()
 
-@app.post("/quote/single")
-def get_single_quote(payload: PolicyQuoteRequest):
+@app.get("/health", summary="Health Check")
+def health_check():
+    return {
+        "status": "healthy",
+        "loaded_models": list(pricing_engine.models.keys())
+    }
+
+@app.post("/pricing/quote", summary="Calculate Technical Premium Quote")
+def calculate_quote(lob: str = "motor", premium_input: float = 500.0, tenure: float = 1.0, voluntary_excess: int = 250):
+    """Generates an actuarial technical premium quote with expense and profit loadings."""
     try:
-        df = pd.DataFrame([payload.features])
-        df['exposure'] = payload.exposure
-        df['voluntary_excess'] = payload.voluntary_excess
+        # Construct feature dataframe for model prediction
+        df = pd.DataFrame([{
+            "Premium": premium_input,
+            "Tenure": tenure,
+            "exposure": tenure,
+            "voluntary_excess": voluntary_excess
+        }])
         
-        pricing_result = engine.predict_policy(df, payload.line_of_business)
+        quote_result = pricing_engine.predict_policy(df, lob=lob)
         return {
-            "status": "success",
-            "line_of_business": payload.line_of_business,
-            "pricing": pricing_result
+            "line_of_business": lob,
+            "pricing_details": quote_result
         }
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
-@app.post("/batch/pricing")
-async def batch_pricing(line_of_business: str, file: UploadFile = File(...)):
-    try:
-        contents = await file.read()
-        if file.filename.endswith('.csv'):
-            df = pd.read_csv(io.BytesIO(contents))
-        elif file.filename.endswith('.parquet'):
-            df = pd.read_parquet(io.BytesIO(contents))
-        else:
-            raise HTTPException(status_code=400, detail="Unsupported file format.")
-            
-        predictions = engine.predict_policy(df, line_of_business)
-        if isinstance(predictions, dict):
-            predictions = [predictions]
-            
-        df['predicted_pure_premium'] = [p['pure_risk_premium'] for p in predictions]
-        df['technical_premium'] = [p['technical_premium'] for p in predictions]
-        
-        output_path = f"submission/batch_scored_{line_of_business}.xlsx"
-        df.to_excel(output_path, index=False)
-        
-        return FileResponse(output_path, media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', filename=f"scored_{line_of_business}.xlsx")
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e))
