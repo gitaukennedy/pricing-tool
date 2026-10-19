@@ -1,6 +1,6 @@
 """
 pricing_tool/train.py
-Trains LightGBM Tweedie pricing models on the hackathon portfolio dataset (CS2S26Q3.csv).
+Trains the LightGBM Tweedie pricing model with robust target validation.
 """
 
 import numpy as np
@@ -16,15 +16,39 @@ def train_and_save_models(models_dir: str = "models", sub_dir: str = "submission
     Path(sub_dir).mkdir(parents=True, exist_ok=True)
     
     print("\n==============================================")
-    print("Training Actuarial Pricing Model (CS2S26Q3)")
+    print("Training Relational Actuarial Pricing Model")
     print("==============================================")
     
-    df = load_pricing_data(is_train=True)
+    df = load_pricing_data(mode="train")
     
-    # Features, Target, and Exposure Offset
-    X = df[["Premium", "Tenure"]]
-    y = df["Claims"]
-    exposure = np.maximum(df["Tenure"], 0.01)
+    # Identify target column: Check policy tables first, then fallback to aggregated claims
+    target_candidates = ['Claims', 'claim_amount', 'total_claim_amount', 'ultimate_claim_cost', 'target', 'cost']
+    y_col = next((c for c in target_candidates if c in df.columns and pd.to_numeric(df[c], errors='coerce').sum() > 0), None)
+    
+    if not y_col:
+        for col in df.select_dtypes(include=[np.number]).columns:
+            if col not in ['row_id', 'policy_id', 'customer_id', 'address_id', 'exposure'] and df[col].sum() > 0:
+                y_col = col
+                break
+                
+    if not y_col:
+        raise ValueError("Could not find a valid target column with a non-zero sum for training!")
+        
+    print(f"Using target column: '{y_col}' with sum = {pd.to_numeric(df[y_col], errors='coerce').sum():,.2f}")
+    y = pd.to_numeric(df[y_col], errors='coerce').fillna(0.0)
+    
+    exclude_cols = target_candidates + ['row_id', 'id', 'customer_id', 'address_id', 'policy_id', 'renewal_decision', y_col]
+    numeric_feature_cols = df.select_dtypes(include=[np.number, bool]).columns.tolist()
+    feature_cols = [c for c in numeric_feature_cols if c not in exclude_cols]
+    
+    X = df[feature_cols].select_dtypes(include=[np.number, bool]).astype(float)
+    print(f"Training on {X.shape[1]} features across {len(X):,} rows.")
+    
+    exposure_col = next((c for c in ['exposure', 'Tenure', 'duration'] if c in df.columns), None)
+    if exposure_col:
+        exposure = pd.Series(np.maximum(pd.to_numeric(df[exposure_col], errors='coerce').fillna(1.0), 0.01))
+    else:
+        exposure = pd.Series(np.ones(len(df)))
     
     params = {
         'objective': 'tweedie',
@@ -64,21 +88,9 @@ def train_and_save_models(models_dir: str = "models", sub_dir: str = "submission
             
         print(f"Fold {fold+1} trained. Validation Tweedie Loss: {score:.4f}")
         
-    # Save trained model binary
     model_path = Path(models_dir) / "pricing_tweedie_model.pkl"
     joblib.dump(best_model, model_path)
     print(f"\nSaved model binary to {model_path}")
-    
-    # Generate predictions for dataset
-    preds = np.maximum(0.0, best_model.predict(X))
-    sub_df = pd.DataFrame({
-        'row_id': df.index,
-        'prediction': preds
-    })
-    
-    sub_file = Path(sub_dir) / "final_submission.csv"
-    sub_df.to_csv(sub_file, index=False)
-    print(f"SUCCESS: Submission generated at {sub_file}")
 
 if __name__ == "__main__":
     train_and_save_models()
