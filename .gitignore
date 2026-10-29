@@ -1,0 +1,25 @@
+# Python environment
+venv/
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Data & Models (Do not push raw datasets or heavy binary models to GitHub)
+data/raw/
+models/
+submission/*.xlsx
+submission/*.csv
+
+# IDE / OS files
+.vscode/
+.DS_Store
+data/
+models_p2/
+submission/
+*.parquet
+*.pkl
+data/
+models_p2/
+submission/
+*.parquet
+*.pkl

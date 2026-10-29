@@ -1,0 +1,22 @@
+lines_of_business:
+  - motor
+  - buildings
+  - contents
+
+actuarial_assumptions:
+  expense_loading: 0.20
+  profit_margin: 0.05
+
+excess_relativities:
+  motor:
+    100: 1.10
+    250: 1.00
+    500: 0.90
+  buildings:
+    100: 1.05
+    250: 1.00
+    500: 0.95
+  contents:
+    100: 1.05
+    250: 1.00
+    500: 0.95
