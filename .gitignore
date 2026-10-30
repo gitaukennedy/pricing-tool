@@ -3,8 +3,8 @@ venv/
 __pycache__/
 *.py[cod]
 *$py.class
-
-# Data & Models (Do not push raw datasets or heavy binary models to GitHub)
+(D
+# Data & Models 
 data/raw/
 models/
 submission/*.xlsx
