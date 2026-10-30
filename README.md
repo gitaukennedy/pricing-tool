@@ -5,11 +5,7 @@ Pricing models for private motor, home buildings, and home contents. Each model 
 ---
 
 ## 1. Quick Links
-- **Write-up (5 pages):** `docs/project_writeup.pdf`
-- **AI Collaboration Log:** `docs/ai_log.md`
-- **Kaggle Leaderboard:** Part 1 [Public Score / Rank] · Part 2 [Public Score / Rank]
-
----
+- **Write-up (5 pages):** file:///C:/Users/hp/Downloads/IAA%20Hackathon%202026%20Final%20Technical%20Report%20(1)%20(1).pdf
 
 ## 2. Results & Validation Metrics
 *Metric: Tweedie $D^2$ ($p = 1.5$). $D^2$ represents the share of deviance removed relative to a constant-rate baseline.*
