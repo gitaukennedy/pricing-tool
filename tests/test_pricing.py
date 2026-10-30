@@ -9,7 +9,7 @@ import numpy as np
 from pathlib import Path
 import joblib
 
-from data_prep import load_pricing_data, compute_survival_probabilities
+from data_prep import load_pricing_data
 
 def test_load_pricing_data():
     """Verify that pricing dataset loads correctly with expected columns."""
